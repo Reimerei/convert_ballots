@@ -1,0 +1,136 @@
+#!/usr/bin/python
+
+import csv
+import sys
+import os
+
+# parses csv file and returns array with data
+def load_csv(filename):
+
+	file = open(filename, 'rt')
+
+	reader = None
+	data = []
+
+	try:
+		reader = csv.reader(file)
+
+		for row in reader:
+
+			data.append(row)
+		
+	finally:
+		file.close()
+
+	#sort users by invite_code
+	return data
+
+def print_ballot(filename, ballot):
+	
+	w = open(filename, "a")
+	
+	ad_count=(len(ballot[0])-1)/2
+
+	out = ""
+
+	# approval
+	for i in range(0, ad_count):
+
+		cand_count = 1
+		has_cand = False
+		for cand in ballot :
+
+			if cand[i] == 1 :
+				out = out + str(cand_count) + ","
+				has_cand = True
+
+			cand_count += 1
+
+		if has_cand :
+			out = out[:-1]
+			out = out + ";"
+
+	if len(out) > 0 :
+		out = out[:-1]
+
+	out = out + "//"
+
+	w.write(out)
+
+	out=""
+
+
+	# disaproval
+	for i in range(ad_count+1, len(ballot[0])):
+
+		cand_count = 1
+		has_cand = False
+		for cand in ballot :
+
+			if cand[i] == 1 :
+				out = out + str(cand_count) + ","
+				has_cand = True
+
+			cand_count += 1
+
+		if has_cand :
+			out = out[:-1]
+			out = out + ";"
+
+	if len(out) > 0 :
+		out = out[:-1]
+
+	out = out + "\n"
+	w.write(out)
+
+## Main Work
+if len(sys.argv) > 1 :
+	if os.path.isfile(sys.argv[1]) :
+ 		print "Using File: " + sys.argv[1]
+ 		ballots=load_csv(sys.argv[1])
+ 	else :
+ 		print "File does not exsist: " + sys.argv[1]
+ 		sys.exit(1)
+else :
+	print "Usage: convert_ballots filename.csv"
+	sys.exit(1)
+
+outfile="ballots.txt"
+
+if os.path.isfile(outfile) :
+	os.remove(outfile)
+
+
+meta=ballots[0][-1].split("_")
+cand_count=int(meta[2])+1
+box_count=int(meta[3])+1
+
+del ballots[0]
+
+ballot_count=1
+for ballot in ballots:
+
+	cands = []
+	valid = True
+
+	for i in range(0,cand_count-1):
+
+		start = i*box_count+2
+		end = (i+1)*box_count+2
+
+		cand = map(int, ballot[start:end])
+
+		if sum(cand) > 1 :
+			valid = False
+
+		cands.append(cand)
+
+	if valid:
+		print "Ballot " + str(ballot_count) + ": Valid"
+		print_ballot(outfile,cands)
+	else :
+		print "Ballot " + str(ballot_count) + ": Invalid data, disgarded"
+
+	ballot_count += 1
+
+print "Outpug file: " + outfile
